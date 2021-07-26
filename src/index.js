@@ -5,14 +5,25 @@ const path = require('path');
 const Router = require('@koa/router');
 const bodyParser = require('koa-bodyparser');
 const html = fs.readFileSync(path.resolve(__dirname, './index.html'), 'utf8');
-const { execute } = require('./utils/promiseCMD.js');
+const {
+  execute,
+  getLocationIp,
+  checkPort
+} = require('./utils/promiseCMD.js');
 
 const router = new Router();
 app
   .use(bodyParser())
   .use(router.routes())
   .use(router.allowedMethods())
-app.listen(3000);
+
+getLocationIp().then(async ip => {
+  const port = await checkPort();
+  if (!port) return console.log('3000～3009端口均不可用, 无法运行')
+  app.listen(port, function () {
+    console.log(`项目运行在: http://${ip}:${port}`)
+  });
+}).catch(err => console.log(err.message || err))
 
 const STATUS = {
   WAITING: Symbol(),
@@ -30,7 +41,10 @@ const taskControl = {
     this.checkBranchStatus()
   },
   async checkBranchStatus() {
-    const { stdout, stderr } = execute(`git checkout master`).then(() => `git branch --merged`);
+    const {
+      stdout,
+      stderr
+    } = execute(`git checkout master`).then(() => `git branch --merged`);
     console.debug(stdout, stderr);
   }
 }
