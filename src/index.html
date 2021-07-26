@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>check release branch</title>
+  <style>
+    .popup {
+      position: fixed;
+      display: flex;
+      left: 50%;
+      top: 50%;
+      transform: translate3d(-50%, -50%, 0);
+      justify-content: center;
+      align-content: center;
+      visibility: hidden;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <h2>合并状态</h2>
+  <table>
+    <tr>
+      <th>分支名</th>
+      <th>状态</th>
+    </tr>
+  </table>
+  <button onclick="showAddPopup()">添加分支</button>
+  <!-- popup -->
+  <div class="popup" id="popup">
+    <input type="text" placeholder="分支名" id="branch-input">
+    <button onclick="submit()">提交</button>
+  </div>
+  <script>
+    const popupDom = document.getElementById('popup');
+    const inputDom = document.getElementById('branch-input');
+    function showAddPopup() {
+      popupState.canShow = true;
+    }
+    function submit() {
+      const value = inputDom.value;
+      fetch('./submit', {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        method: 'POST',
+        body: JSON.stringify({
+          branch: value
+        })
+      }).then(res => {
+        res = res.json();
+        console.debug('res', res);
+      }).catch(error => {
+        console.debug('error', error);
+      })
+    }
+  </script>
+   <script>
+    const popupState = new Proxy({
+      canShow: false
+    }, {
+      set: function(obj, prop, value) {
+        popupDom.style.visibility = value ? 'visible' : 'hidden'
+      }
+    });
+  </script>
+  <!-- socket -->
+  <script>
+    // Create WebSocket connection.
+    const socket = new WebSocket('ws://localhost:3000');
+    // Connection opened
+    socket.addEventListener('open', function (event) {
+        socket.send('Hello Server!');
+    });
+    // Listen for messages
+    socket.addEventListener('message', function (event) {
+        console.log('Message from server ', event.data);
+    });
+  </script>
+</body>
+</html>
