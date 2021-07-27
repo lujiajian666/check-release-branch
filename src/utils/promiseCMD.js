@@ -83,7 +83,7 @@ async function gitCloneBare (remote = 'https://git.garena.com/beepos/foms_admin_
   const cwd = path.resolve(__dirname, '../../bareGit/')
   const clonePath = findClonePath(remote)
   try {
-    await access(cwd + clonePath)
+    await access(cwd + '/' + clonePath)
     await clone({ remote, branch, cwd })
   } catch (err) {
     if (err.from !== 'access') { throw err }
@@ -91,7 +91,7 @@ async function gitCloneBare (remote = 'https://git.garena.com/beepos/foms_admin_
 }
 
 function findClonePath (remote) {
-  const regExp = /.*?\/(\w*?)\.git/
+  const regExp = /.*\/(\S*?\.git)/
   const matchRes = execResultToArray(regExp, remote)
   if (!matchRes[1]) throw new Error('仓库地址不正确')
   return matchRes[1]

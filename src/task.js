@@ -9,6 +9,7 @@ module.exports = {
   addRepo (name) {
     if (task[name]) return
     task[name] = {
+      repoName: name,
       releaseName: 'master',
       featureList: []
     }

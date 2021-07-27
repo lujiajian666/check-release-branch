@@ -11,13 +11,29 @@
       padding-top: 50px;
       text-align: center;
     }
+    .card {
+      margin-top: 30px;
+    }
+    .container {
+      padding: 50px;
+    }
+    .title {
+      color: chocolate;
+    }
+    div[data-table] {
+      padding: 10px;
+      background: aliceblue;
+    }
   </style>
 </head>
 <body>
   <template id="template">
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title" data-branch-name></h5>
+        <h5 class="card-title">
+          <p class="title">当前仓库: <span data-repo-name></span></p>
+          <p class="title">当前release分支: <span data-branch-name></span></p>
+        </h5>
         <div data-table>
           <table class="table">
             <thead>
@@ -31,6 +47,10 @@
             </tbody>
           </table>
         </div>
+        <br>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBranch">
+          添加分支
+        </button>
       </div>
     </div>
   </template>
@@ -41,7 +61,7 @@
     </button>
   </div>
   <!-- add repo popup -->
-  <div class="modal fade" id="addRepo" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal fade" id="addRepo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -68,7 +88,7 @@
     </div>
   </div>
   <!-- add branch popup -->
-  <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal fade" id="addBranch" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -143,9 +163,9 @@
     function repaintTable(list) {
       const { newContentDom, oldContentDom } = getNewAndOldContentDom();
       list.forEach((tableData) => {
-        const cloneTableDom = cloneTableDom();
-        fillTableContent(cloneTableDom, tableData);
-        newContentDom.appendChild(cloneTableDom);
+        const tableDom = cloneTableDom();
+        fillTableContent(tableDom, tableData);
+        newContentDom.appendChild(tableDom);
       })
       bodyDom.replaceChild(newContentDom, oldContentDom);
     }
@@ -159,6 +179,7 @@
       return document.importNode(tableTemplateDom, true);
     }
     function fillTableContent(cloneTableDom, data) {
+      cloneTableDom.querySelector('[data-repo-name]').innerText = data.repoName;
       cloneTableDom.querySelector('[data-branch-name]').innerText = data.releaseName;
       const trList = data.featureList.map((feature) => 
         `
