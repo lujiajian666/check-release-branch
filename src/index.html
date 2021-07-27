@@ -5,79 +5,176 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>check release branch</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
   <style>
-    .popup {
-      position: fixed;
-      display: flex;
-      left: 50%;
-      top: 50%;
-      transform: translate3d(-50%, -50%, 0);
-      justify-content: center;
-      align-content: center;
-      visibility: hidden;
-      border: 1px solid black;
+    .button-wrapper {
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h2>合并状态</h2>
-  <table>
-    <tr>
-      <th>分支名</th>
-      <th>状态</th>
-    </tr>
-  </table>
-  <button onclick="showAddPopup()">添加分支</button>
-  <!-- popup -->
-  <div class="popup" id="popup">
-    <input type="text" placeholder="分支名" id="branch-input">
-    <button onclick="submit()">提交</button>
+  <template id="template">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title" data-branch-name></h5>
+        <div data-table>
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">功能分支名</th>
+                <th scope="col">提交者</th>
+                <th scope="col">是否合并到release</th>
+              </tr>
+            </thead>
+            <tbody data-tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+  <div class="container" id="container"></div>
+  <div class="button-wrapper">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRepo">
+      添加仓库
+    </button>
+  </div>
+  <!-- add repo popup -->
+  <div class="modal fade" id="addRepo" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="repoAddress" class="form-label"></label>
+            <select class="form-select" id="repoAddress">
+              <option value="https://git.garena.com/beepos/foms_admin_portal.git">foms-admin</option>
+              <option value="https://git.garena.com/android-dev/ocha-crm-rn.git">foms-RN</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" onclick="addRepo()">
+            <span id="addRepoButtonSpainner" style="display: none;" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- add branch popup -->
+  <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="branchName" class="form-label">分支名</label>
+            <input type="email" class="form-control" id="branchName" placeholder="name@example.com">
+          </div>
+          <div class="mb-3">
+            <label for="exampleFormControlTextarea1" class="form-label">Example textarea</label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script>
-    const popupDom = document.getElementById('popup');
-    const inputDom = document.getElementById('branch-input');
-    function showAddPopup() {
-      popupState.canShow = true;
-    }
-    function submit() {
-      const value = inputDom.value;
-      fetch('./submit', {
+    function fetchJSON({ url, method = 'GET', body }) {
+      const requestSet = {
         headers: {
           'Content-Type': 'application/json'
         },
-        method: 'POST',
-        body: JSON.stringify({
-          branch: value
-        })
-      }).then(res => {
-        res = res.json();
-        console.debug('res', res);
-      }).catch(error => {
-        console.debug('error', error);
+        method,
+      }
+      if (body) requestSet.body = body;
+      return fetch(url, requestSet).then(res => {
+        return res.json();
       })
     }
-  </script>
-   <script>
-    const popupState = new Proxy({
-      canShow: false
-    }, {
-      set: function(obj, prop, value) {
-        popupDom.style.visibility = value ? 'visible' : 'hidden'
-      }
-    });
-  </script>
-  <!-- socket -->
-  <script>
     // Create WebSocket connection.
-    const socket = new WebSocket('ws://localhost:3000');
-    // Connection opened
-    socket.addEventListener('open', function (event) {
-        socket.send('Hello Server!');
-    });
+    const socket = new WebSocket(`ws://localhost:${location.port}`);
     // Listen for messages
     socket.addEventListener('message', function (event) {
-        console.log('Message from server ', event.data);
+      const responseData = JSON.parse(event.data);
+      switch(responseData.action) {
+        case 'addRepo':
+          addRepoCallback(responseData);
+          break;
+        default:
+          break;
+      }
     });
+
+    function addRepo() {
+      const repoAddressInputDom = document.getElementById('repoAddress');
+      document.getElementById('addRepoButtonSpainner').style.display = 'inline-block';
+      socket.send(JSON.stringify({
+        action: 'addRepo',
+        repoAddress: repoAddressInputDom.value
+      }));
+    }
+    function addRepoCallback(responseData) {
+      document.getElementById('addRepoButtonSpainner').style.display = 'none';
+      addRepoModel.hide();
+      if (responseData.status !== 'success') {
+        alert(responseData.message || '未知错误');
+        return;
+      }
+      repaintTable(responseData.data);
+    }
+    
+    const tableTemplateDom = document.getElementById('template').content;
+    const bodyDom = document.getElementsByTagName('body')[0];
+    function repaintTable(list) {
+      const { newContentDom, oldContentDom } = getNewAndOldContentDom();
+      list.forEach((tableData) => {
+        const cloneTableDom = cloneTableDom();
+        fillTableContent(cloneTableDom, tableData);
+        newContentDom.appendChild(cloneTableDom);
+      })
+      bodyDom.replaceChild(newContentDom, oldContentDom);
+    }
+    function getNewAndOldContentDom() {
+      const newContentDom = document.createElement('div');
+      newContentDom.id = 'container';
+      const oldContentDom = document.getElementById('container');
+      return { newContentDom, oldContentDom }
+    }
+    function cloneTableDom() {
+      return document.importNode(tableTemplateDom, true);
+    }
+    function fillTableContent(cloneTableDom, data) {
+      cloneTableDom.querySelector('[data-branch-name]').innerText = data.releaseName;
+      const trList = data.featureList.map((feature) => 
+        `
+        <tr>
+          <th scope="col">${name}</th>
+          <th scope="col">${author}</th>
+          <th scope="col">${hasMerged ? '是' : '否'}</th>
+        </tr>
+        `
+      );
+      cloneTableDom.querySelector('[data-tbody]').innerHTML = trList.join('');
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+  <script>
+    var addRepoModel = new bootstrap.Modal(document.getElementById('addRepo'), {
+      keyboard: false
+    })
   </script>
 </body>
 </html>

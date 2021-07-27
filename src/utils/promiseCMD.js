@@ -1,6 +1,9 @@
 const {
-  exec
+  exec,
+  spawn,
 } = require('child_process');
+const { fstat } = require('fs');
+const path = require('path');
 const DEFAULT_PORT_LIST = [
   3001,
   3002,
@@ -31,7 +34,6 @@ function baseExec(cmd) {
 function execute(cmd) {
   return baseExec(cmd);
 }
-
 async function checkPort(portList = DEFAULT_PORT_LIST) {
   let port;
   for (let i = 0, length = portList.length; i < length; i++) {
@@ -65,9 +67,43 @@ async function getLocationIp() {
     throw err;
   }
 }
+function access(filePath) {
+  return new Promise((resolve, reject) => {
+    fs.access(filePath, (err) => {
+      if (!err) {
+        reject(new Error(`${filePath} already exists`));
+      }
+      resolve();
+    });
+  })
+}
+async function gitCloneBare(remote = 'https://git.garena.com/beepos/foms_admin_portal.git', branch = 'master') {
+  const cwd = path.resolve(__dirname, '../../bareGit/');
+  await access()
+  let resolveHandler, rejectHandler;
+  const p = new Promise((resolve, reject) => {
+    resolveHandler = resolve;
+    rejectHandler = reject;
+  });
+
+  const command = spawn('git', ['clone', remote, '-b', branch, '--bare', ], { cwd });
+  command.stdout.on('data', (data) => {
+    console.log(`git clone stdout: ${data}`);
+  });
+  command.stderr.on('data', (data) => {
+    console.error(`git clone stderr: ${data}`);
+  });
+  command.on('close', (code) => {
+    console.log(`child process exited with code ${code}`);
+    if (code === 0) resolveHandler();
+    else rejectHandler(new Error('git clone error'));
+  });
+  return await p;
+}
 
 module.exports = {
   execute,
   getLocationIp,
-  checkPort
+  checkPort,
+  gitCloneBare
 }
