@@ -1,19 +1,19 @@
 const STATUS = {
-  WAITING: Symbol(),
-  DOING: Symbol(),
-  DONE: Symbol()
+  WAITING: Symbol('status'),
+  DOING: Symbol('status'),
+  DONE: Symbol('status')
 }
 const task = {}
 
 module.exports = {
-  addRepo(name) {
-    if (task[name]) return;
+  addRepo (name) {
+    if (task[name]) return
     task[name] = {
       releaseName: 'master',
       featureList: []
     }
   },
-  getAllRepo() {
-    return Reflect.ownKeys(task).map(key => task[key]);
+  getAllRepo () {
+    return Reflect.ownKeys(task).map(key => task[key])
   }
 }
