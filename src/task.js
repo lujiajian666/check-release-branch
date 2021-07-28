@@ -45,5 +45,12 @@ module.exports = {
         currentBranch.status = STATUS.NOT_MERGED
       }
     }
+  },
+  deleteBranch (repoName, branchName) {
+    const list = task[repoName].featureList
+    const targetIndex = list.findIndex((branch) => branch.name === branchName);
+    if (targetIndex !== -1) {
+      list.splice(targetIndex, 1)
+    }
   }
 }

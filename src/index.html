@@ -40,7 +40,8 @@
               <tr>
                 <th scope="col">功能分支名</th>
                 <th scope="col">添加者</th>
-                <th scope="col">是否合并到release</th>
+                <th scope="col">是否已经合并到release</th>
+                <th scope="col">动作</th>
               </tr>
             </thead>
             <tbody data-tbody>
@@ -144,7 +145,7 @@
   </div>
   <script>
     // Create WebSocket connection.
-    const socket = new WebSocket(`ws://localhost:${location.port}`);
+    const socket = new WebSocket(`ws://${location.host}`);
     // Listen for messages
     socket.addEventListener('message', function (event) {
       const responseData = JSON.parse(event.data);
@@ -160,6 +161,9 @@
           break;
         case 'changeReleaseBranch':
           changeReleaseBranchCallback(responseData);
+          break;
+        case 'deleteBranch':
+          deleteBranchCallback(responseData);
           break;
         default:
           break;
@@ -219,9 +223,24 @@
         repoName: currentRepo
       }));
     }
-    function changeReleaseBranchCallback() {
+    function changeReleaseBranchCallback(responseData) {
       document.getElementById('changeReleaseButtonSpainner').style.display = 'none';
       changeReleaseBranchModel.hide();
+      if (responseData.status !== 'success') {
+        alert(responseData.message || '未知错误');
+        return;
+      }
+    }
+    // delete branch
+    function deleteBranch(repoName, branchName) {
+      console.log(repoName, branchName);
+      socket.send(JSON.stringify({
+        action: 'deleteBranch',
+        branchName: branchName,
+        repoName: repoName
+      }));
+    }
+    function deleteBranchCallback(responseData) {
       if (responseData.status !== 'success') {
         alert(responseData.message || '未知错误');
         return;
@@ -230,6 +249,11 @@
     // paint table
     const tableTemplateDom = document.getElementById('template').content;
     const bodyDom = document.getElementsByTagName('body')[0];
+    bodyDom.addEventListener('click', function (event) {
+        const target = event.target
+        if (!target.dataset.delete) return
+        deleteBranch(event.target.dataset.repoName, event.target.dataset.branchName)
+      }, false);
     function repaintTable(list) {
       const { newContentDom, oldContentDom } = getNewAndOldContentDom();
       list.forEach((tableData) => {
@@ -256,9 +280,12 @@
       const trList = data.featureList.map((feature) => 
         `
         <tr>
-          <th scope="col">${feature.name}</th>
-          <th scope="col">${feature.author}</th>
-          <th scope="col">${feature.status}</th>
+          <td scope="col">${feature.name}</td>
+          <td scope="col">${feature.author || ''}</td>
+          <td scope="col">${feature.status}</td>
+          <td scope="col">
+            <span style="color:#ff000078;cursor:pointer;" data-delete="1" data-repo-name="${data.repoName}" data-branch-name="${feature.name}">删除</span>
+          </td>
         </tr>
         `
       );

@@ -2,6 +2,7 @@ const {
   gitClone,
   gitCheckout,
   findMergedBranch,
+  deleteGitBranch,
   getLocalGitBranch
 } = require('../utils/promiseCMD')
 const task = require('../task')
@@ -43,6 +44,8 @@ async function handler (receivedData) {
       return await addBranch(receivedData)
     case 'changeReleaseBranch':
       return await changeReleaseBranch(receivedData)
+    case 'deleteBranch':
+      return await deleteBranch(receivedData)
     default:
       return {}
   }
@@ -77,6 +80,13 @@ async function changeReleaseBranch (receivedData) {
   task.changeReleaseBranch(repoName, branchName)
   const mergedList = await findMergedBranch(repoName)
   task.setBranchStatus(repoName, mergedList)
+  sendToAll(task.getAllRepo())
+}
+async function deleteBranch (receivedData) {
+  const repoName = receivedData.repoName
+  const branchName = receivedData.branchName
+  await deleteGitBranch(repoName, branchName)
+  task.deleteBranch(repoName, branchName)
   sendToAll(task.getAllRepo())
 }
 function sendToAll (message) {

@@ -165,6 +165,12 @@ async function getLocalGitBranch (repoName) {
   })
   return branchMessageToArray(str.stdout)
 }
+async function deleteGitBranch (repoName, branchName) {
+  const cwd = getCwd(repoName)
+  await baseExec(`git branch -D ${branchName}`, {
+    cwd
+  })
+}
 function getCwd (repoName) {
   const cloneFolderPath = findCloneFolderName(repoName)
   return path.resolve(__dirname, `../../bareGit/${cloneFolderPath}`)
@@ -180,5 +186,6 @@ module.exports = {
   gitClone,
   gitCheckout,
   findMergedBranch,
-  getLocalGitBranch
+  getLocalGitBranch,
+  deleteGitBranch
 }
