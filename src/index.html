@@ -39,7 +39,7 @@
             <thead>
               <tr>
                 <th scope="col">功能分支名</th>
-                <th scope="col">提交者</th>
+                <th scope="col">添加者</th>
                 <th scope="col">是否合并到release</th>
               </tr>
             </thead>
@@ -48,8 +48,11 @@
           </table>
         </div>
         <br>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBranch">
+        <button type="button" class="btn btn-primary" data-add-branch data-bs-toggle="modal" onclick="openAddBranchModel(this)">
           添加分支
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changeReleaseBranch">
+          更改release分支
         </button>
       </div>
     </div>
@@ -65,7 +68,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+          <h5 class="modal-title" id="exampleModalLabel">添加仓库</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -92,6 +95,34 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">添加功能分支</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="branchName" class="form-label">分支名</label>
+            <input type="email" class="form-control" id="branchName" placeholder="f-21.618.0.SPFOMS-3620.co-funding-marketing.luwz">
+          </div>
+          <!-- <div class="mb-3">
+            <label for="exampleFormControlTextarea1" class="form-label"></label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+          </div> -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" onclick="addBranch()">
+            <span id="addBranchButtonSpainner" style="display: none;" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- change release branch popup -->
+  <div class="modal fade" id="changeReleaseBranch" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
           <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -113,27 +144,20 @@
     </div>
   </div>
   <script>
-    function fetchJSON({ url, method = 'GET', body }) {
-      const requestSet = {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        method,
-      }
-      if (body) requestSet.body = body;
-      return fetch(url, requestSet).then(res => {
-        return res.json();
-      })
-    }
     // Create WebSocket connection.
     const socket = new WebSocket(`ws://localhost:${location.port}`);
     // Listen for messages
     socket.addEventListener('message', function (event) {
       const responseData = JSON.parse(event.data);
       switch(responseData.action) {
+        case 'refresh':
+          repaintTable(responseData.data);
+          break;
         case 'addRepo':
           addRepoCallback(responseData);
           break;
+        case 'addBranch':
+          addBranchCallback(responseData);
         default:
           break;
       }
@@ -148,7 +172,6 @@
       }));
     }
     function addRepoCallback(responseData) {
-      console.debug('responseData', responseData)
       document.getElementById('addRepoButtonSpainner').style.display = 'none';
       addRepoModel.hide();
       if (responseData.status !== 'success') {
@@ -181,21 +204,52 @@
     function fillTableContent(cloneTableDom, data) {
       cloneTableDom.querySelector('[data-repo-name]').innerText = data.repoName;
       cloneTableDom.querySelector('[data-branch-name]').innerText = data.releaseName;
+      cloneTableDom.querySelector('[data-add-branch]').setAttribute('data-add-branch', data.repoName);
       const trList = data.featureList.map((feature) => 
         `
         <tr>
-          <th scope="col">${name}</th>
-          <th scope="col">${author}</th>
-          <th scope="col">${hasMerged ? '是' : '否'}</th>
+          <th scope="col">${feature.name}</th>
+          <th scope="col">${feature.author}</th>
+          <th scope="col">${feature.status}</th>
         </tr>
         `
       );
       cloneTableDom.querySelector('[data-tbody]').innerHTML = trList.join('');
     }
+    
+    let currentRepo;
+    function openAddBranchModel(self) {
+      currentRepo = self.dataset.addBranch;
+      addBranchModel.show();
+    }
+    function addBranch() {
+      const branchInputDom = document.getElementById('branchName');
+      document.getElementById('addBranchButtonSpainner').style.display = 'inline-block';
+      socket.send(JSON.stringify({
+        action: 'addBranch',
+        branchName: branchInputDom.value,
+        repoName: currentRepo
+      }));
+    }
+    function addBranchCallback(responseData) {
+      document.getElementById('addBranchButtonSpainner').style.display = 'none';
+      addBranchModel.hide();
+      if (responseData.status !== 'success') {
+        alert(responseData.message || '未知错误');
+        return;
+      }
+      repaintTable(responseData.data);
+    }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
   <script>
     var addRepoModel = new bootstrap.Modal(document.getElementById('addRepo'), {
+      keyboard: false
+    })
+    var addBranchModel = new bootstrap.Modal(document.getElementById('addBranch'), {
+      keyboard: true
+    })
+    var changeReleaseBranchModel = new bootstrap.Modal(document.getElementById('changeReleaseBranch'), {
       keyboard: false
     })
   </script>

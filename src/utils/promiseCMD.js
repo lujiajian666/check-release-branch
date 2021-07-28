@@ -4,6 +4,7 @@ const {
 } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const task = require('../task')
 const {
   execResultToArray
 } = require('./regExp')
@@ -19,9 +20,9 @@ const DEFAULT_PORT_LIST = [
   3009
 ]
 
-function baseExec (cmd) {
+function baseExec (cmd, options) {
   return new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout, stderr) => {
+    exec(cmd, options, (error, stdout, stderr) => {
       if (error) {
         // 不能用throw，外层try catch不能捕获。原因未明
         reject(error)
@@ -79,19 +80,18 @@ function access (filePath) {
     })
   })
 }
-async function gitCloneBare (remote = 'https://git.garena.com/beepos/foms_admin_portal.git', branch = 'master') {
-  const cwd = path.resolve(__dirname, '../../bareGit/')
-  const clonePath = findClonePath(remote)
+async function gitClone (remote = 'https://git.garena.com/beepos/foms_admin_portal.git', branch = 'master') {
+  const cwd = getCwd(remote)
   try {
-    await access(cwd + '/' + clonePath)
-    await clone({ remote, branch, cwd })
+    await access(cwd)
+    await clone({ remote, branch })
   } catch (err) {
     if (err.from !== 'access') { throw err }
   }
 }
 
-function findClonePath (remote) {
-  const regExp = /.*\/(\S*?\.git)/
+function findCloneFolderName (remote) {
+  const regExp = /.*\/(\S*?)\.git/
   const matchRes = execResultToArray(regExp, remote)
   if (!matchRes[1]) throw new Error('仓库地址不正确')
   return matchRes[1]
@@ -99,8 +99,8 @@ function findClonePath (remote) {
 
 function clone ({ remote, branch, cwd }) {
   return new Promise((resolve, reject) => {
-    const command = spawn('git', ['clone', remote, '-b', branch, '--bare'], {
-      cwd
+    const command = spawn('git', ['clone', remote, '-b', branch], {
+      cwd: path.resolve(__dirname, '../../bareGit')
     })
     command.stdout.on('data', (data) => {
       console.log(`git clone stdout: ${data}`)
@@ -119,9 +119,66 @@ function clone ({ remote, branch, cwd }) {
   })
 }
 
+async function gitCheckout (repoName, branchName) {
+  return new Promise((resolve, reject) => {
+    const cwd = getCwd(repoName)
+    const command = spawn('git', ['checkout', '-b', branchName, `origin/${branchName}`], {
+      cwd
+    })
+    let errMsg = ''
+    command.stdout.on('data', (data) => {
+      console.log(`git checkout stdout: ${data}`)
+    })
+    command.stderr.on('data', (data) => {
+      errMsg = data
+      console.error(`git checkout stderr: ${data}`)
+    })
+    command.on('error', (err) => {
+      reject(err)
+    })
+    command.on('close', (code) => {
+      console.log(`child process exited with code ${code}`)
+      if (code === 0) resolve()
+      else reject(new Error(errMsg))
+    })
+  })
+}
+async function findMergedBranch (repoName) {
+  const cwd = getCwd(repoName)
+  const releaseBranch = task.getRepo(repoName).releaseName
+  await baseExec(`git checkout ${releaseBranch}`, {
+    cwd
+  })
+  await baseExec('git pull', {
+    cwd
+  })
+  const res = await baseExec('git branch --merged', {
+    cwd
+  })
+  const mergedList = branchMessageToArray(res.stdout)
+  return mergedList
+}
+async function getLocalGitBranch (repoName) {
+  const cwd = getCwd(repoName)
+  const str = await baseExec('git branch', {
+    cwd
+  })
+  return branchMessageToArray(str.stdout)
+}
+function getCwd (repoName) {
+  const cloneFolderPath = findCloneFolderName(repoName)
+  return path.resolve(__dirname, `../../bareGit/${cloneFolderPath}`)
+}
+function branchMessageToArray (str) {
+  return str.trim().replace(/\n/g, ',').replace('*', '').split(',').map((str) => str.trim())
+}
+
 module.exports = {
   execute,
   getLocationIp,
   checkPort,
-  gitCloneBare
+  gitClone,
+  gitCheckout,
+  findMergedBranch,
+  getLocalGitBranch
 }
