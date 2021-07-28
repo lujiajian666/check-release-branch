@@ -41,6 +41,8 @@ async function handler (receivedData) {
       return await addRepo(receivedData)
     case 'addBranch':
       return await addBranch(receivedData)
+    case 'changeReleaseBranch':
+      return await changeReleaseBranch(receivedData)
     default:
       return {}
   }
@@ -57,6 +59,22 @@ async function addBranch (receivedData) {
   const branchName = receivedData.branchName
   await gitCheckout(repoName, branchName)
   task.addFeatureBranch(repoName, branchName)
+  const mergedList = await findMergedBranch(repoName)
+  task.setBranchStatus(repoName, mergedList)
+  sendToAll(task.getAllRepo())
+}
+async function changeReleaseBranch (receivedData) {
+  const repoName = receivedData.repoName
+  const branchName = receivedData.branchName
+  try {
+    await gitCheckout(repoName, branchName)
+    task.addFeatureBranch(repoName, branchName)
+  } catch (err) {
+    if (err.message.indexOf('already exists') === -1) {
+      throw err
+    }
+  }
+  task.changeReleaseBranch(repoName, branchName)
   const mergedList = await findMergedBranch(repoName)
   task.setBranchStatus(repoName, mergedList)
   sendToAll(task.getAllRepo())

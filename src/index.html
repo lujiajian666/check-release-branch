@@ -51,7 +51,7 @@
         <button type="button" class="btn btn-primary" data-add-branch data-bs-toggle="modal" onclick="openAddBranchModel(this)">
           添加分支
         </button>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changeReleaseBranch">
+        <button type="button" class="btn btn-primary" data-change-release data-bs-toggle="modal" onclick="openChangeReleaseBranchModel(this)">
           更改release分支
         </button>
       </div>
@@ -101,7 +101,7 @@
         <div class="modal-body">
           <div class="mb-3">
             <label for="branchName" class="form-label">分支名</label>
-            <input type="email" class="form-control" id="branchName" placeholder="f-21.618.0.SPFOMS-3620.co-funding-marketing.luwz">
+            <input type="email" class="form-control" id="branchName" placeholder="输入远端分支名">
           </div>
           <!-- <div class="mb-3">
             <label for="exampleFormControlTextarea1" class="form-label"></label>
@@ -123,22 +123,21 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+          <h5 class="modal-title" id="exampleModalLabel">更改release分支</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="branchName" class="form-label">分支名</label>
-            <input type="email" class="form-control" id="branchName" placeholder="name@example.com">
-          </div>
-          <div class="mb-3">
-            <label for="exampleFormControlTextarea1" class="form-label">Example textarea</label>
-            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+            <label for="releaseBranchName" class="form-label">release分支名</label>
+            <input type="email" class="form-control" id="releaseBranchName" placeholder="输入release分支名">
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary">Submit</button>
+          <button type="button" class="btn btn-primary" onclick="changeReleaseBranch()">
+            <span id="changeReleaseButtonSpainner" style="display: none;" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Submit
+          </button>
         </div>
       </div>
     </div>
@@ -158,11 +157,15 @@
           break;
         case 'addBranch':
           addBranchCallback(responseData);
+          break;
+        case 'changeReleaseBranch':
+          changeReleaseBranchCallback(responseData);
+          break;
         default:
           break;
       }
     });
-
+    // add reop
     function addRepo() {
       const repoAddressInputDom = document.getElementById('repoAddress');
       document.getElementById('addRepoButtonSpainner').style.display = 'inline-block';
@@ -178,9 +181,53 @@
         alert(responseData.message || '未知错误');
         return;
       }
-      repaintTable(responseData.data);
     }
-    
+    // add branch
+    let currentRepo;
+    function openAddBranchModel(self) {
+      currentRepo = self.dataset.addBranch;
+      addBranchModel.show();
+    }
+    function addBranch() {
+      const branchInputDom = document.getElementById('branchName');
+      document.getElementById('addBranchButtonSpainner').style.display = 'inline-block';
+      socket.send(JSON.stringify({
+        action: 'addBranch',
+        branchName: branchInputDom.value,
+        repoName: currentRepo
+      }));
+    }
+    function addBranchCallback(responseData) {
+      document.getElementById('addBranchButtonSpainner').style.display = 'none';
+      addBranchModel.hide();
+      if (responseData.status !== 'success') {
+        alert(responseData.message || '未知错误');
+        return;
+      }
+    }
+    // change release branch
+    function openChangeReleaseBranchModel(self) {
+      currentRepo = self.dataset.changeRelease
+      changeReleaseBranchModel.show()
+    }
+    function changeReleaseBranch() {
+      const branchInputDom = document.getElementById('releaseBranchName');
+      document.getElementById('changeReleaseButtonSpainner').style.display = 'inline-block';
+      socket.send(JSON.stringify({
+        action: 'changeReleaseBranch',
+        branchName: branchInputDom.value,
+        repoName: currentRepo
+      }));
+    }
+    function changeReleaseBranchCallback() {
+      document.getElementById('changeReleaseButtonSpainner').style.display = 'none';
+      changeReleaseBranchModel.hide();
+      if (responseData.status !== 'success') {
+        alert(responseData.message || '未知错误');
+        return;
+      }
+    }
+    // paint table
     const tableTemplateDom = document.getElementById('template').content;
     const bodyDom = document.getElementsByTagName('body')[0];
     function repaintTable(list) {
@@ -205,6 +252,7 @@
       cloneTableDom.querySelector('[data-repo-name]').innerText = data.repoName;
       cloneTableDom.querySelector('[data-branch-name]').innerText = data.releaseName;
       cloneTableDom.querySelector('[data-add-branch]').setAttribute('data-add-branch', data.repoName);
+      cloneTableDom.querySelector('[data-change-release]').setAttribute('data-change-release', data.repoName);
       const trList = data.featureList.map((feature) => 
         `
         <tr>
@@ -215,30 +263,6 @@
         `
       );
       cloneTableDom.querySelector('[data-tbody]').innerHTML = trList.join('');
-    }
-    
-    let currentRepo;
-    function openAddBranchModel(self) {
-      currentRepo = self.dataset.addBranch;
-      addBranchModel.show();
-    }
-    function addBranch() {
-      const branchInputDom = document.getElementById('branchName');
-      document.getElementById('addBranchButtonSpainner').style.display = 'inline-block';
-      socket.send(JSON.stringify({
-        action: 'addBranch',
-        branchName: branchInputDom.value,
-        repoName: currentRepo
-      }));
-    }
-    function addBranchCallback(responseData) {
-      document.getElementById('addBranchButtonSpainner').style.display = 'none';
-      addBranchModel.hide();
-      if (responseData.status !== 'success') {
-        alert(responseData.message || '未知错误');
-        return;
-      }
-      repaintTable(responseData.data);
     }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>

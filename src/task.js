@@ -30,6 +30,11 @@ module.exports = {
       status: STATUS.CHECKING
     })
   },
+  changeReleaseBranch (repoName, branchName) {
+    if (task[repoName]) {
+      task[repoName].releaseName = branchName
+    }
+  },
   setBranchStatus (repoName, mergedBranchNames) {
     const featureList = task[repoName].featureList
     for (let i = 0, length = featureList.length; i < length; i++) {
