@@ -55,6 +55,8 @@ async function addRepo (receivedData) {
   await gitClone(repoName)
   const localBranches = await getLocalGitBranch(repoName)
   task.addRepo(repoName, localBranches)
+  const mergedList = await findMergedBranch(repoName)
+  task.setBranchStatus(repoName, mergedList)
   sendToAll(task.getAllRepo())
 }
 async function addBranch (receivedData) {
