@@ -86,10 +86,9 @@ async function gitClone (remote = 'https://git.garena.com/beepos/foms_admin_port
     await access(cwd)
     await clone({ remote, branch })
   } catch (err) {
-    if (err.from !== 'access') { throw err }
+    if (err.from !== 'access') throw err
   }
 }
-
 function findCloneFolderName (remote) {
   const regExp = /.*\/(\S*?)\.git/
   const matchRes = execResultToArray(regExp, remote)

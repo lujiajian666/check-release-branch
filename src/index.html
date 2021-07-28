@@ -284,7 +284,17 @@
           <td scope="col">${feature.author || ''}</td>
           <td scope="col">${feature.status}</td>
           <td scope="col">
-            <span style="color:#ff000078;cursor:pointer;" data-delete="1" data-repo-name="${data.repoName}" data-branch-name="${feature.name}">删除</span>
+            <span 
+              style="
+                color: ${feature.name === data.releaseName ? '#322a2a78' : '#ff000078'};
+                cursor:pointer;
+                pointer-events: ${feature.name === data.releaseName ? 'none' : 'inherit'};
+              " 
+              data-delete="1" 
+              data-repo-name="${data.repoName}" 
+              data-branch-name="${feature.name}">
+                ${feature.name === data.releaseName ? '不能删除当前分支' : '删除'}
+              </span>
           </td>
         </tr>
         `
