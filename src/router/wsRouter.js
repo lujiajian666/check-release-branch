@@ -3,7 +3,8 @@ const {
   gitCheckout,
   findMergedBranch,
   deleteGitBranch,
-  getLocalGitBranch
+  getLocalGitBranch,
+  fetchOrigin
 } = require('../utils/promiseCMD')
 const task = require('../task')
 const wsList = []
@@ -62,6 +63,7 @@ async function addRepo (receivedData) {
 async function addBranch (receivedData) {
   const repoName = receivedData.repoName
   const branchName = receivedData.branchName
+  await fetchOrigin(repoName)
   await gitCheckout(repoName, branchName)
   task.addFeatureBranch(repoName, branchName)
   const mergedList = await findMergedBranch(repoName)

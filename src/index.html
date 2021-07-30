@@ -24,6 +24,9 @@
       padding: 10px;
       background: aliceblue;
     }
+    .tips {
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -49,6 +52,7 @@
           </table>
         </div>
         <br>
+        <p class="tips">git fetch origin会在每次添加分支的时候执行</p>
         <button type="button" class="btn btn-primary" data-add-branch data-bs-toggle="modal" onclick="openAddBranchModel(this)">
           添加分支
         </button>
@@ -292,9 +296,7 @@
               " 
               data-delete="1" 
               data-repo-name="${data.repoName}" 
-              data-branch-name="${feature.name}">
-                ${feature.name === data.releaseName ? '不能删除当前分支' : '删除'}
-              </span>
+              data-branch-name="${feature.name}">删除</span>
           </td>
         </tr>
         `
